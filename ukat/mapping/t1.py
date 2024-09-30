@@ -69,7 +69,7 @@ class T1Model(fitting.Model):
             # less than the negative of 5% of the recovered signal
             # then assume the data has been magnitude corrected
             if (np.percentile(pixel_array[..., 0], 5)
-                < -recovered_signal * 0.05):
+                    < -recovered_signal * 0.05):
                 self.mag_corr = True
                 neg_percent = (np.sum(pixel_array[..., 0] < 0)
                                / pixel_array[..., 0].size)
