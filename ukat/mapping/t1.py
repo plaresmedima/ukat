@@ -233,7 +233,7 @@ class T1:
         if mdr:
             pixel_array, deform, _, _ = mdreg.fit(
                 pixel_array,
-                fit_image={
+                fit_image = {
                     'func': _T1_fit,
                     'inversion_list': inversion_list,
                     'affine': affine,
@@ -241,7 +241,7 @@ class T1:
                     'tss_axis': tss_axis,
                     'mask': mask,
                     'parameters': parameters,
-                    'molli': molli,
+                    'molli': False, # MOLLI-correction is not relevant for MDR
                     'multithread': multithread,
                 },
                 # @Alex: These coreg settings are default so technically speaking do not have
@@ -252,7 +252,7 @@ class T1:
                 # As it stands the user has no way of modifying the way mdr runs, eg.
                 # change verbosity level, stopping criteria or coreg options.
                 # I didn't change it as that may exactly be the intention of ukat?
-                fit_coreg={
+                fit_coreg = {
                     'package': 'elastix',
                     'parallel': False,  # elastix is not parallelizable
                 }
@@ -265,7 +265,13 @@ class T1:
             # reordering at this stage, We can just take it out later if mdreg is updated.
             self.deformation_field = np.swapaxes(deform, -2, -1)
             # @Alex: Hack to avoid magnitude corrected model being selected
-            # This needs a better solution as this prevents a magnitude corrected mode
+            # Even with the tighter criteria the negative noise induced by the 
+            # deformations still pushes it to a magnitude corrected model
+            # This needs a better solution as this prevents a magnitude 
+            # corrected mode
+            # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+            # !!!!!! Adding some emphasis here as this REALLY needs fixing !!!!!!
+            # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
             pixel_array = np.abs(pixel_array)
         else:
             # @Alex: is this the expected default?
@@ -620,5 +626,8 @@ def magnitude_correct(pixel_array):
 def _T1_fit(pixel_array, inversion_list=None, affine=None, **kwargs):
     # Alex: added the abs() here to avoid the bug with model selection
     # This needs a better solution as this prevents a magnitude corrected mode
+    # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    # !!!!!! Adding some emphasis here as this REALLY needs fixing !!!!!!
+    # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     map = T1(np.abs(pixel_array), inversion_list, affine, **kwargs)
     return map.get_fit_signal(), None
