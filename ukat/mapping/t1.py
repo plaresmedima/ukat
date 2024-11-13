@@ -8,7 +8,7 @@ from . import fitting
 
 class T1Model(fitting.Model):
     def __init__(self, pixel_array, ti, parameters=2, mask=None, tss=0,
-                 tss_axis=-2, mag_corr=False, multithread=True):
+                 tss_axis=-2, molli=False, mag_corr=False, multithread=True):
         """
         A class containing the T1 fitting model
 
@@ -58,6 +58,7 @@ class T1Model(fitting.Model):
         self.parameters = parameters
         self.tss = tss
         self.tss_axis = tss_axis
+        self.molli = molli
 
         if (mag_corr == False) & (np.nanmin(pixel_array) < 0):
             warnings.warn('Negative values found in data, this could be due '
@@ -78,8 +79,8 @@ class T1Model(fitting.Model):
                 self.t1_eq = two_param_abs_eq
                 super().__init__(pixel_array, ti, self.t1_eq, mask,
                                  multithread)
-            self.bounds = ([0, 0], [5000, 1000000000])
-            self.initial_guess = [1000, 30000]
+            self.bounds = ([0, 0], [5000, 100])
+            self.initial_guess = [1000, 1]
         elif self.parameters == 3:
             if self.mag_corr:
                 self.t1_eq = three_param_eq
@@ -89,8 +90,12 @@ class T1Model(fitting.Model):
                 self.t1_eq = three_param_abs_eq
                 super().__init__(pixel_array, ti, self.t1_eq, mask,
                                  multithread)
-            self.bounds = ([0, 0, 1], [5000, 1000000000, 2])
-            self.initial_guess = [1000, 30000, 2]
+            if self.molli:
+                self.bounds = ([0, 0, 0], [5000, 100, 3])
+                self.initial_guess = [1000, 1, 2]
+            else:
+                self.bounds = ([0, 0, 1], [5000, 100, 2])
+                self.initial_guess = [1000, 1, 2]
         else:
             raise ValueError(f'Parameters can be 2 or 3 only. You specified '
                              f'{parameters}.')
@@ -204,8 +209,10 @@ class T1:
         assert mag_corr in [True,
                             False], (f'mag_corr must be True or False. '
                                      f'You entered {mag_corr}.')
+        # Normalise the data so its roughly in the same range across vendors
+        self.scale = np.nanmax(pixel_array)
+        self.pixel_array = pixel_array / self.scale
 
-        self.pixel_array = pixel_array
         self.shape = pixel_array.shape[:-1]
         self.dimensions = len(pixel_array.shape)
         self.n_ti = pixel_array.shape[-1]
@@ -254,7 +261,7 @@ class T1:
         # Fit Data
         self.fitting_model = T1Model(self.pixel_array, self.inversion_list,
                                      self.parameters, self.mask, self.tss,
-                                     self.tss_axis, self.mag_corr,
+                                     self.tss_axis, self.molli, self.mag_corr,
                                      self.multithread)
         self.mag_corr = self.fitting_model.mag_corr
         popt, error, r2 = fitting.fit_image(self.fitting_model)
@@ -287,10 +294,15 @@ class T1:
 
         # Do MOLLI correction
         if self.molli:
-            correction_factor = (self.m0_map * self.eff_map) / self.m0_map - 1
+            correction_factor = (((self.m0_map * self.eff_map) / self.m0_map)
+                                 - 1)
             percentage_error = self.t1_err / self.t1_map
             self.t1_map = np.nan_to_num(self.t1_map * correction_factor)
             self.t1_err = np.nan_to_num(self.t1_map * percentage_error)
+
+        # Scale the data back to the original scale
+        self.m0_map *= self.scale
+        self.m0_err *= self.scale
 
     def r1_map(self):
         """
