@@ -168,7 +168,7 @@ class TestT1:
         signal_array = np.tile(self.signal_fail_fit, (10, 10, 3, 1))
 
         # Fail to fit using the 2 parameter equation
-        mapper_two_param = T1(signal_array[..., 2], self.t[:2], self.affine,
+        mapper_two_param = T1(signal_array[..., :2], self.t[:2], self.affine,
                               parameters=2, mag_corr=True, multithread=True)
         assert mapper_two_param.shape == signal_array.shape[:-1]
         # Voxels that fail to fit are set to zero
