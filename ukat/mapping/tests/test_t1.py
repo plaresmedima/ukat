@@ -289,53 +289,17 @@ class TestT1:
         npt.assert_almost_equal(mapper.r1_map().mean(), 1 / self.t1)
         npt.assert_almost_equal(mapper.r2.mean(), 1)
 
+        # Test negative values warning when mag_corr is False
+        with pytest.warns(UserWarning):
+            signal_array[0, 0, 0, 0] = -1000
+            mapper = T1(signal_array, self.t, self.affine, mag_corr=False,
+                        multithread=False)
+
         # Test with mag_corr not recognised input
         with pytest.raises(AssertionError):
             mapper = T1(signal_array, self.t, self.affine,
                         mag_corr='yes please',
                         multithread=False)
-
-    def test_auto_mag_corr(self):
-        # Test warning for small number of negative values thus assuming no
-        # magnitude correction has been performed
-
-        # Make the absolute of the signal into a 4D array
-        signal_array = np.tile(np.abs(self.correct_signal_two_param),
-                               (10, 10, 3, 1))
-        # Add a single negative value to the signal
-        signal_array[0, 0, 0, 0] = -1000
-
-        with pytest.warns(UserWarning):
-            mapper = T1(signal_array, self.t, self.affine,
-                        mag_corr='auto', multithread=False)
-
-        # Test warning for enough negative values to assume magnitude
-        # correction has been performed but still not that many negative values
-
-        # Make the of the signal into a 4D array
-        signal_array = np.tile(np.abs(self.correct_signal_two_param),
-                               (10, 10, 3, 1))
-        # Add a row of signals with negative values to the image
-        # 3.3% of first inversion is negative but 1st percentile is negative.
-        signal_array[:, 0, 0, :] = self.correct_signal_two_param
-
-        with pytest.warns(UserWarning):
-            mapper = T1(signal_array, self.t, self.affine,
-                        mag_corr='auto', multithread=False)
-
-        # Test that giving abs data leads to mag_corr = False
-        signal_array = np.tile(np.abs(self.correct_signal_two_param),
-                               (10, 10, 3, 1))
-        mapper = T1(signal_array, self.t, self.affine, mag_corr='auto',
-                    multithread=False)
-        assert mapper.mag_corr is False
-
-        # Test that giving mag corrected data leads to mag_corr = True
-        signal_array = np.tile(self.correct_signal_two_param,
-                               (10, 10, 3, 1))
-        mapper = T1(signal_array, self.t, self.affine, mag_corr='auto',
-                    multithread=False)
-        assert mapper.mag_corr is True
 
 
     def test_molli_2p_warning(self):
