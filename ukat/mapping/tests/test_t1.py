@@ -169,7 +169,7 @@ class TestT1:
 
         # Fail to fit using the 2 parameter equation
         mapper_two_param = T1(signal_array[..., :2], self.t[:2], self.affine,
-                              parameters=2, mag_corr=True, multithread=True)
+                              parameters=2, mag_corr=False, multithread=True)
         assert mapper_two_param.shape == signal_array.shape[:-1]
         # Voxels that fail to fit are set to zero
         npt.assert_equal(mapper_two_param.t1_map.mean(), 0)
@@ -180,7 +180,7 @@ class TestT1:
 
         # Fail to fit using the 3 parameter equation
         mapper_three_param = T1(signal_array[..., :2], self.t[:2], self.affine,
-                                parameters=3, mag_corr=True, multithread=True)
+                                parameters=3, mag_corr=False, multithread=True)
         assert mapper_three_param.shape == signal_array.shape[:-1]
         # Voxels that fail to fit are set to zero
         npt.assert_equal(mapper_three_param.t1_map.mean(), 0)
