@@ -60,7 +60,7 @@ class T1Model(fitting.Model):
         self.tss_axis = tss_axis
         self.molli = molli
 
-        if (mag_corr == False) & (np.nanmin(pixel_array) < 0):
+        if (mag_corr is False) & (np.nanmin(pixel_array) < 0):
             warnings.warn('Negative values found in data, this could be due '
                           'to noise or preprocessing steps, however if you '
                           'have magnitude corrected your data, remember to '
