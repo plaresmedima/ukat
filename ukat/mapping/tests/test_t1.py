@@ -94,7 +94,8 @@ class TestT1:
         signal_array = np.tile(self.correct_signal_two_param, (10, 10, 3, 1))
 
         # Multithread
-        mapper = T1(signal_array, self.t, self.affine, multithread=True)
+        mapper = T1(signal_array, self.t, self.affine,
+                    mag_corr=True, multithread=True)
         assert mapper.shape == signal_array.shape[:-1]
         npt.assert_almost_equal(mapper.t1_map.mean(), self.t1)
         npt.assert_almost_equal(mapper.m0_map.mean(), self.m0)
@@ -102,7 +103,8 @@ class TestT1:
         npt.assert_almost_equal(mapper.r2.mean(), 1)
 
         # Single Threaded
-        mapper = T1(signal_array, self.t, self.affine, multithread=False)
+        mapper = T1(signal_array, self.t, self.affine, mag_corr=True,
+                    multithread=False)
         assert mapper.shape == signal_array.shape[:-1]
         npt.assert_almost_equal(mapper.t1_map.mean(), self.t1)
         npt.assert_almost_equal(mapper.m0_map.mean(), self.m0)
@@ -110,7 +112,8 @@ class TestT1:
         npt.assert_almost_equal(mapper.r2.mean(), 1)
 
         # Auto Threaded
-        mapper = T1(signal_array, self.t, self.affine, multithread='auto')
+        mapper = T1(signal_array, self.t, self.affine, mag_corr=True,
+                    multithread='auto')
         assert mapper.shape == signal_array.shape[:-1]
         npt.assert_almost_equal(mapper.t1_map.mean(), self.t1)
         npt.assert_almost_equal(mapper.m0_map.mean(), self.m0)
@@ -123,7 +126,7 @@ class TestT1:
 
         # Multithread
         mapper = T1(signal_array, self.t, self.affine, parameters=3,
-                    multithread=True)
+                    mag_corr=True, multithread=True)
         assert mapper.shape == signal_array.shape[:-1]
         npt.assert_almost_equal(mapper.t1_map.mean(), self.t1)
         npt.assert_almost_equal(mapper.m0_map.mean(), self.m0, decimal=4)
@@ -133,7 +136,7 @@ class TestT1:
 
         # Single Threaded
         mapper = T1(signal_array, self.t, self.affine, parameters=3,
-                    multithread=False)
+                    mag_corr=True, multithread=False)
         assert mapper.shape == signal_array.shape[:-1]
         npt.assert_almost_equal(mapper.t1_map.mean(), self.t1)
         npt.assert_almost_equal(mapper.m0_map.mean(), self.m0, decimal=4)
@@ -144,7 +147,7 @@ class TestT1:
     def test_tss(self):
 
         mapper = T1(self.correct_signal_two_param_tss, self.t, self.affine,
-                    tss=10)
+                    tss=10, mag_corr=True)
         assert mapper.shape == self.correct_signal_two_param_tss.shape[:-1]
         npt.assert_almost_equal(mapper.t1_map.mean(), self.t1)
         npt.assert_almost_equal(mapper.m0_map.mean(), self.m0)
@@ -153,7 +156,8 @@ class TestT1:
 
     def test_tss_axis(self):
         signal_array = np.swapaxes(self.correct_signal_two_param_tss, 0, 1)
-        mapper = T1(signal_array, self.t, self.affine, tss=10, tss_axis=0)
+        mapper = T1(signal_array, self.t, self.affine, tss=10, tss_axis=0,
+                    mag_corr=True)
         npt.assert_almost_equal(mapper.t1_map.mean(), self.t1)
         npt.assert_almost_equal(mapper.m0_map.mean(), self.m0)
         npt.assert_almost_equal(mapper.r1_map().mean(), 1 / self.t1)
@@ -165,7 +169,7 @@ class TestT1:
 
         # Fail to fit using the 2 parameter equation
         mapper_two_param = T1(signal_array[..., :2], self.t[:2], self.affine,
-                              parameters=2, multithread=True)
+                              parameters=2, mag_corr=False, multithread=True)
         assert mapper_two_param.shape == signal_array.shape[:-1]
         # Voxels that fail to fit are set to zero
         npt.assert_equal(mapper_two_param.t1_map.mean(), 0)
@@ -175,8 +179,8 @@ class TestT1:
         npt.assert_equal(mapper_two_param.r2.mean(), 0)
 
         # Fail to fit using the 3 parameter equation
-        mapper_three_param = T1(signal_array[..., :2], self.t[:2],
-                                self.affine, parameters=3, multithread=True)
+        mapper_three_param = T1(signal_array[..., :2], self.t[:2], self.affine,
+                                parameters=3, mag_corr=False, multithread=True)
         assert mapper_three_param.shape == signal_array.shape[:-1]
         # Voxels that fail to fit are set to zero
         npt.assert_equal(mapper_three_param.t1_map.mean(), 0)
@@ -191,7 +195,8 @@ class TestT1:
         # Bool mask
         mask = np.ones(signal_array.shape[:-1], dtype=bool)
         mask[:5, ...] = False
-        mapper = T1(signal_array, self.t, self.affine, mask=mask)
+        mapper = T1(signal_array, self.t, self.affine, mask=mask,
+                    mag_corr=True)
         assert mapper.shape == signal_array.shape[:-1]
         npt.assert_almost_equal(mapper.t1_map[5:, ...].mean(), self.t1)
         npt.assert_equal(mapper.t1_map[:5, ...].mean(), 0)
@@ -199,7 +204,8 @@ class TestT1:
         # Int mask
         mask = np.ones(signal_array.shape[:-1])
         mask[:5, ...] = 0
-        mapper = T1(signal_array, self.t, self.affine, mask=mask)
+        mapper = T1(signal_array, self.t, self.affine, mask=mask,
+                    mag_corr=True)
         assert mapper.shape == signal_array.shape[:-1]
         npt.assert_almost_equal(mapper.t1_map[5:, ...].mean(), self.t1)
         npt.assert_equal(mapper.t1_map[:5, ...].mean(), 0)
@@ -262,31 +268,38 @@ class TestT1:
                         inversion_list=np.linspace(0, 2000, 10),
                         affine=self.affine, tss=1, tss_axis=2)
 
-    def test_mag_corr_warning(self):
-        # Test warning for small number of negative values thus assuming no
-        # magnitude correction has been performed
+    def test_mag_corr_options(self):
+        # Test that the mag_corr option can be set to True, False, auto is
+        # checked more thoroughly in the next test
+        signal_array = np.tile(self.correct_signal_two_param, (10, 10, 3, 1))
 
-        # Make the absolute of the signal into a 4D array
-        signal_array = np.tile(np.abs(self.correct_signal_two_param),
-                               (10, 10, 3, 1))
-        # Add a single negative value to the signal
-        signal_array[0, 0, 0, 0] = -1
+        # Test that mag_corr = True
+        mapper = T1(signal_array, self.t, self.affine, mag_corr=True,
+                    multithread=False)
+        npt.assert_almost_equal(mapper.t1_map.mean(), self.t1)
+        npt.assert_almost_equal(mapper.m0_map.mean(), self.m0)
+        npt.assert_almost_equal(mapper.r1_map().mean(), 1 / self.t1)
+        npt.assert_almost_equal(mapper.r2.mean(), 1)
 
+        # Test that mag_corr = False
+        mapper = T1(np.abs(signal_array), self.t, self.affine, mag_corr=False,
+                    multithread=False)
+        npt.assert_almost_equal(mapper.t1_map.mean(), self.t1)
+        npt.assert_almost_equal(mapper.m0_map.mean(), self.m0)
+        npt.assert_almost_equal(mapper.r1_map().mean(), 1 / self.t1)
+        npt.assert_almost_equal(mapper.r2.mean(), 1)
+
+        # Test negative values warning when mag_corr is False
         with pytest.warns(UserWarning):
-            mapper = T1(signal_array, self.t, self.affine, multithread=False)
+            signal_array[0, 0, 0, 0] = -1000
+            mapper = T1(signal_array, self.t, self.affine, mag_corr=False,
+                        multithread=False)
 
-        # Test warning for enough negative values to assume magnitude
-        # correction has been performed but still not that many negative values
-
-        # Make the of the signal into a 4D array
-        signal_array = np.tile(np.abs(self.correct_signal_two_param),
-                               (10, 10, 3, 1))
-        # Add a row of signals with negative values to the image
-        # 3.3% of first inversion is negative but 1st percentile is negative.
-        signal_array[:, 0, 0, :] = self.correct_signal_two_param
-
-        with pytest.warns(UserWarning):
-            mapper = T1(signal_array, self.t, self.affine, multithread=False)
+        # Test with mag_corr not recognised input
+        with pytest.raises(AssertionError):
+            mapper = T1(signal_array, self.t, self.affine,
+                        mag_corr='yes please',
+                        multithread=False)
 
 
     def test_molli_2p_warning(self):
@@ -405,7 +418,8 @@ class TestT1:
         # Two parameter fit
         signal_array = np.tile(self.correct_signal_two_param, (10, 10, 3, 1))
 
-        mapper = T1(signal_array, self.t, self.affine, multithread=False)
+        mapper = T1(signal_array, self.t, self.affine, mag_corr=True,
+                    multithread=False)
         fit_signal = mapper.get_fit_signal()
         npt.assert_array_almost_equal(fit_signal, signal_array)
 
@@ -413,7 +427,7 @@ class TestT1:
         signal_array = np.tile(self.correct_signal_three_param, (10, 10, 3, 1))
 
         mapper = T1(signal_array, self.t, self.affine,
-                    parameters=3, multithread=False)
+                    parameters=3, mag_corr=True, multithread=False)
         fit_signal = mapper.get_fit_signal()
         npt.assert_array_almost_equal(fit_signal, signal_array)
 
@@ -421,8 +435,6 @@ class TestT1:
         image_molli, affine_molli, ti_molli = fetch.t1_molli_philips()
         image_molli = image_molli[70:90, 100:120, :2, :]
         ti_molli *= 1000
-
-        signal_array = np.tile(self.correct_signal_three_param, (10, 10, 3, 1))
 
         mapper = T1(image_molli, ti_molli, affine_molli,
                     parameters=3, molli=True, multithread=False)
