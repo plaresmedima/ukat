@@ -145,7 +145,8 @@ class T1:
     # As it is the last argument in the list this will not break existing code
     # And it means the user is not forced to provide a dummy affine when it plays no role.
     def __init__(self, pixel_array, inversion_list, affine, tss=0, tss_axis=-2,
-                 mask=None, parameters=2, mag_corr=False, molli=False, multithread=True, mdr=False):
+                 mask=None, parameters=2, mag_corr=False, molli=False,
+                 multithread=True, mdr=False):
         """Initialise a T1 class instance.
 
         Parameters
@@ -209,28 +210,66 @@ class T1:
             If True, this performs a motion correction with model-driven 
             registration before performing the final fit to the model function. 
         """
-        assert multithread in [True,
-                               False,
-                               'auto'], (f'multithreaded must '
-                                         f'be True, False or auto. You '
-                                         f'entered { multithread}.')
-        assert mag_corr in [True,
-                            False], (f'mag_corr must be True or False. '
-                                     f'You entered {mag_corr}.')
         # Normalise the data so its roughly in the same range across vendors
         self.scale = np.nanmax(pixel_array)
         self.pixel_array = pixel_array / self.scale
-        # @Alex: I have moved this up so multithreading
-        # settings can be reused in mdreg, which requires a True or False
-        # value. In this case (elastix) it is actually unnecessary as
-        # parallelization is not a real option anyway. But it would be relevant if
-        # wanted to run with skimage, for instamce.
+
+        self.shape = pixel_array.shape[:-1]
+        self.dimensions = len(pixel_array.shape)
+        self.n_ti = pixel_array.shape[-1]
+        self.n_vox = np.prod(self.shape)
+        self.affine = affine
+        # Generate a mask if there isn't one specified
+        if mask is None:
+            self.mask = np.ones(self.shape, dtype=bool)
+        else:
+            self.mask = mask.astype(bool)
+        # Don't process any nan values
+        self.mask[np.isnan(np.sum(pixel_array, axis=-1))] = False
+        self.inversion_list = inversion_list
+        self.tss = tss
+        if tss_axis is not None:
+            self.tss_axis = tss_axis % self.dimensions
+        else:
+            self.tss_axis = None
+            self.tss = 0
+        self.parameters = parameters
+        self.mag_corr = mag_corr
+        self.molli = molli
         if multithread == 'auto':
             npixels = np.prod(pixel_array.shape[:-1])
             if npixels > 20:
                 multithread = True
             else:
                 multithread = False
+        self.multithread = multithread
+
+        # Some sanity checks
+        assert multithread in [True,
+                               False,
+                               'auto'], (f'multithreaded must '
+                                         f'be True, False or auto. You '
+                                         f'entered {multithread}.')
+        assert mag_corr in [True,
+                            False], (f'mag_corr must be True or False. '
+                                     f'You entered {mag_corr}.')
+
+        assert mdr in [True, False], (f'mdr must be True or False. '
+                                      f'You entered {mdr}.')
+        assert (pixel_array.shape[-1]
+                == len(inversion_list)), 'Number of inversions does not ' \
+                                         'match the number of time frames ' \
+                                         'on the last axis of pixel_array'
+        if self.tss != 0:
+            assert (self.tss_axis != self.dimensions - 1), \
+                'Temporal slice spacing can\'t be applied to the TI axis.'
+            assert (tss_axis < self.dimensions), \
+                'tss_axis must be less than the number of spatial dimensions'
+        if self.molli:
+            if self.parameters == 2:
+                self.parameters = 3
+                warnings.warn('MOLLI requires a three parameter fit, '
+                              'using parameters=3.')
 
         if mdr:
             pixel_array, deform, _, _ = mdreg.fit(
@@ -267,9 +306,9 @@ class T1:
             # reordering at this stage, We can just take it out later if mdreg is updated.
             self.deformation_field = np.swapaxes(deform, -2, -1)
             # @Alex: Hack to avoid magnitude corrected model being selected
-            # Even with the tighter criteria the negative noise induced by the 
+            # Even with the tighter criteria the negative noise induced by the
             # deformations still pushes it to a magnitude corrected model
-            # This needs a better solution as this prevents a magnitude 
+            # This needs a better solution as this prevents a magnitude
             # corrected mode
             # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
             # !!!!!! Adding some emphasis here as this REALLY needs fixing !!!!!!
@@ -278,47 +317,6 @@ class T1:
         else:
             # @Alex: is this the expected default?
             self.deformation_field = None
-
-        self.pixel_array = pixel_array
-        self.shape = pixel_array.shape[:-1]
-        self.dimensions = len(pixel_array.shape)
-        self.n_ti = pixel_array.shape[-1]
-        self.n_vox = np.prod(self.shape)
-        self.affine = affine
-        # Generate a mask if there isn't one specified
-        if mask is None:
-            self.mask = np.ones(self.shape, dtype=bool)
-        else:
-            self.mask = mask.astype(bool)
-        # Don't process any nan values
-        self.mask[np.isnan(np.sum(pixel_array, axis=-1))] = False
-        self.inversion_list = inversion_list
-        self.tss = tss
-        if tss_axis is not None:
-            self.tss_axis = tss_axis % self.dimensions
-        else:
-            self.tss_axis = None
-            self.tss = 0
-        self.parameters = parameters
-        self.mag_corr = mag_corr
-        self.molli = molli
-        self.multithread = multithread
-
-        # Some sanity checks
-        assert (pixel_array.shape[-1]
-                == len(inversion_list)), 'Number of inversions does not ' \
-                                         'match the number of time frames ' \
-                                         'on the last axis of pixel_array'
-        if self.tss != 0:
-            assert (self.tss_axis != self.dimensions - 1), \
-                'Temporal slice spacing can\'t be applied to the TI axis.'
-            assert (tss_axis < self.dimensions), \
-                'tss_axis must be less than the number of spatial dimensions'
-        if self.molli:
-            if self.parameters == 2:
-                self.parameters = 3
-                warnings.warn('MOLLI requires a three parameter fit, '
-                              'using parameters=3.')
 
         # Fit Data
         self.fitting_model = T1Model(self.pixel_array, self.inversion_list,
