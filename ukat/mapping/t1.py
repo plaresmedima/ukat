@@ -141,9 +141,6 @@ class T1:
         apart from TI
     """
 
-    # @Alex: suggestion: make affine a keyword parameter with default np.eye(4).
-    # As it is the last argument in the list this will not break existing code
-    # And it means the user is not forced to provide a dummy affine when it plays no role.
     def __init__(self, pixel_array, inversion_list, affine, tss=0, tss_axis=-2,
                  mask=None, parameters=2, mag_corr=False, molli=False,
                  multithread=True, mdr=False):
@@ -207,8 +204,8 @@ class T1:
             on the number of voxels being fit.
         mdr : bool, optional
             Default 'False`
-            If True, this performs a motion correction with model-driven 
-            registration before performing the final fit to the model function. 
+            If True, this performs a motion correction with model-driven
+            registration before performing the final fit to the model function.
         """
         # Normalise the data so its roughly in the same range across vendors
         self.scale = np.nanmax(pixel_array)
@@ -274,49 +271,31 @@ class T1:
         if mdr:
             pixel_array, deform, _, _ = mdreg.fit(
                 pixel_array,
-                fit_image = {
-                    'func': _T1_fit,
-                    'inversion_list': inversion_list,
-                    'affine': affine,
-                    'tss': tss,
-                    'tss_axis': tss_axis,
-                    'mask': mask,
-                    'parameters': parameters,
-                    'molli': False, # MOLLI-correction is not relevant for MDR
-                    'multithread': multithread,
+                fit_image={
+                    'func': _t1_fit,
+                    'inversion_list': self.inversion_list,
+                    'affine': self.affine,
+                    'tss': self.tss,
+                    'tss_axis': self.tss_axis,
+                    'mask': self.mask,
+                    'parameters': self.parameters,
+                    'mag_corr': self.mag_corr,
+                    # MOLLI-correction is not relevant for MDR
+                    'molli': False,
+                    'multithread': self.multithread,
                 },
-                # @Alex: These coreg settings are default so technically speaking do not have
-                # to be specified here. I am leaving it in nevertheless as a template in case we want
-                # to explore alternative coregistration settings later. The fit_coreg
-                # dictionary could also be exposed as a keyword argument in T1.__init__()
-                # in case we want to give the user the option to modify the detail.
-                # As it stands the user has no way of modifying the way mdr runs, eg.
-                # change verbosity level, stopping criteria or coreg options.
-                # I didn't change it as that may exactly be the intention of ukat?
+                # All default settings but kept here as a template for if we
+                # decide to expose coreg options to ukat users in the future.
                 fit_coreg = {
                     'package': 'elastix',
                     'parallel': False,  # elastix is not parallelizable
                 }
             )
-            # @Alex: At the moment the order of the dimensions in the deformation field returned by mdreg is awkward.
-            # Current dimensions are (x,y,2,t) for 2-dimensional pixel_arrays,
-            # and (x,y,z,3,t) for 3 dimensional. Better would be (x,y,t,2) and (x,y,z,t,3)
-            # - i.e add a new dimension at the end.
-            # We will probable change this in mdreg at some point so I put in an ad-hoc
-            # reordering at this stage, We can just take it out later if mdreg is updated.
+            # Changing the dimensions of the deformation field to a more
+            # intuitive order.
             self.deformation_field = np.swapaxes(deform, -2, -1)
-            # @Alex: Hack to avoid magnitude corrected model being selected
-            # Even with the tighter criteria the negative noise induced by the
-            # deformations still pushes it to a magnitude corrected model
-            # This needs a better solution as this prevents a magnitude
-            # corrected mode
-            # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-            # !!!!!! Adding some emphasis here as this REALLY needs fixing !!!!!!
-            # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-            pixel_array = np.abs(pixel_array)
-        else:
-            # @Alex: is this the expected default?
-            self.deformation_field = None
+
+            self.pixel_array = pixel_array
 
         # Fit Data
         self.fitting_model = T1Model(self.pixel_array, self.inversion_list,
@@ -631,11 +610,6 @@ def magnitude_correct(pixel_array):
 
 
 # Private wrapper for use by mdreg
-def _T1_fit(pixel_array, inversion_list=None, affine=None, **kwargs):
-    # Alex: added the abs() here to avoid the bug with model selection
-    # This needs a better solution as this prevents a magnitude corrected mode
-    # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    # !!!!!! Adding some emphasis here as this REALLY needs fixing !!!!!!
-    # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    map = T1(np.abs(pixel_array), inversion_list, affine, **kwargs)
+def _t1_fit(pixel_array, inversion_list=None, affine=None, **kwargs):
+    map = T1(pixel_array, inversion_list, affine, **kwargs)
     return map.get_fit_signal(), None
