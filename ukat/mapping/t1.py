@@ -240,6 +240,7 @@ class T1:
             else:
                 multithread = False
         self.multithread = multithread
+        self.mdr = mdr
 
         # Some sanity checks
         assert multithread in [True,
@@ -377,13 +378,13 @@ class T1:
         maps : list or 'all', optional
             List of maps to save to NIFTI. This should either the string "all"
             or a list of maps from ["t1", "t1_err", "m0", "m0_err", "eff",
-            "eff_err", "r1", "r2", "mask"]
+            "eff_err", "deformation_field", "r1", "r2", "mask"]
         """
         os.makedirs(output_directory, exist_ok=True)
         base_path = os.path.join(output_directory, base_file_name)
         if maps == 'all' or maps == ['all']:
-            maps = ['t1', 't1_err', 'm0', 'm0_err', 'eff', 'eff_err', 'r1_map',
-                    'r2', 'mask']
+            maps = ['t1', 't1_err', 'm0', 'm0_err', 'eff', 'eff_err',
+                    'deformation_field', 'r1_map', 'r2', 'mask']
         if isinstance(maps, list):
             for result in maps:
                 if result == 't1' or result == 't1_map':
@@ -409,6 +410,11 @@ class T1:
                     eff_err_nifti = nib.Nifti1Image(self.eff_err,
                                                     affine=self.affine)
                     nib.save(eff_err_nifti, base_path + '_eff_err.nii.gz')
+                elif self.mdr is True and result == 'deformation_field':
+                    deformation_nifti = nib.Nifti1Image(self.deformation_field,
+                                                        affine=self.affine)
+                    nib.save(deformation_nifti,
+                             base_path + '_deformation_field.nii.gz')
                 elif result == 'r1' or result == 'r1_map':
                     r1_nifti = nib.Nifti1Image(T1.r1_map(self),
                                                affine=self.affine)
@@ -425,7 +431,7 @@ class T1:
             raise ValueError('No NIFTI file saved. The variable "maps" '
                              'should be "all" or a list of maps from '
                              '"["t1", "t1_err", "m0", "m0_err", "eff", '
-                             '"eff_err", "r1", "mask"]".')
+                             '"eff_err", "deformation_field", "r1", "mask"]".')
 
         return
 
