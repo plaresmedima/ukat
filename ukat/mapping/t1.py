@@ -272,7 +272,8 @@ class T1:
         if mdr:
             pixel_array, deform, _, _ = mdreg.fit(
                 pixel_array,
-                fit_image={
+                force_2d = True,
+                fit_image = {
                     'func': _t1_fit,
                     'inversion_list': self.inversion_list,
                     'affine': self.affine,
