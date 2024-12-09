@@ -363,7 +363,7 @@ class TestT1:
     def test_to_nifti(self):
         # Create a T1 map instance and test different export to NIFTI scenarios
         signal_array = np.tile(self.correct_signal_three_param, (10, 10, 3, 1))
-        mapper = T1(signal_array, self.t, self.affine, parameters=3)
+        mapper = T1(signal_array, self.t, self.affine, parameters=3, mdr=True)
 
         if os.path.exists('test_output'):
             shutil.rmtree('test_output')
@@ -373,7 +373,7 @@ class TestT1:
         mapper.to_nifti(output_directory='test_output',
                         base_file_name='t1test', maps='all')
         output_files = os.listdir('test_output')
-        assert len(output_files) == 9
+        assert len(output_files) == 10
         assert 't1test_eff_err.nii.gz' in output_files
         assert 't1test_eff_map.nii.gz' in output_files
         assert 't1test_m0_err.nii.gz' in output_files
@@ -383,6 +383,7 @@ class TestT1:
         assert 't1test_r2.nii.gz' in output_files
         assert 't1test_t1_err.nii.gz' in output_files
         assert 't1test_t1_map.nii.gz' in output_files
+        assert 't1test_deformation_field.nii.gz' in output_files
 
         for f in os.listdir('test_output'):
             os.remove(os.path.join('test_output', f))

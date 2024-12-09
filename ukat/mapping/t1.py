@@ -271,9 +271,9 @@ class T1:
 
         if mdr:
             pixel_array, deform, _, _ = mdreg.fit(
-                pixel_array,
-                force_2d = True,
-                fit_image = {
+                self.pixel_array,
+                force_2d=True,
+                fit_image={
                     'func': _t1_fit,
                     'inversion_list': self.inversion_list,
                     'affine': self.affine,
@@ -288,7 +288,7 @@ class T1:
                 },
                 # All default settings but kept here as a template for if we
                 # decide to expose coreg options to ukat users in the future.
-                fit_coreg = {
+                fit_coreg={
                     'package': 'elastix',
                     'parallel': False,  # elastix is not parallelizable
                 }
