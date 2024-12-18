@@ -386,6 +386,15 @@ class TestT1:
                              t1_stats['min']['3D'], t1_stats['max']['3D']],
                             gold_standard_2p_mdr, rtol=1e-6, atol=5e-3)
 
+    def test_get_pixel_array(self):
+        # Create a T1 map instance and test different export to NIFTI scenarios
+        signal_array = np.tile(self.correct_signal_two_param, (10, 10, 3, 1))
+        mapper = T1(signal_array, self.t, self.affine, parameters=2)
+
+        # Check that the pixel array is returned
+        pixel_array = mapper.get_pixel_array()
+        npt.assert_array_almost_equal(pixel_array, signal_array)
+
     def test_to_nifti(self):
         # Create a T1 map instance and test different export to NIFTI scenarios
         signal_array = np.tile(self.correct_signal_three_param, (10, 10, 3, 1))
