@@ -524,7 +524,7 @@ class T1:
         Get the pixel array from the T1 class. This method should be used
         rather than T1.pixel_array as it will return the data in the
         original scale.
-        
+
         Returns
         -------
         pixel_array : np.ndarray
