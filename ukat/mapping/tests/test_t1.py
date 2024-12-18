@@ -313,7 +313,7 @@ class TestT1:
         with pytest.raises(ValueError):
             mapper = T1(pixel_array=signal_array,
                         inversion_list=self.t,
-                        affine=self.affine, tss=10, mdr=True)
+                        affine=self.affine, tss=10, tss_axis=1, mdr=True)
 
     def test_real_data(self):
         # Get test data
