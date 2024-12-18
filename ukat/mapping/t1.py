@@ -671,6 +671,7 @@ def magnitude_correct(pixel_array):
     phase_offset = np.abs(phase_factor) - (np.pi / 2)
     sign = -(phase_offset / np.abs(phase_offset))
     corrected_array = sign * np.abs(pixel_array)
+    corrected_array = np.nan_to_num(corrected_array)
     return corrected_array
 
 
