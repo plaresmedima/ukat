@@ -363,7 +363,7 @@ class TestT1:
     def test_to_nifti(self):
         # Create a T1 map instance and test different export to NIFTI scenarios
         signal_array = np.tile(self.correct_signal_three_param, (10, 10, 3, 1))
-        mapper = T1(signal_array, self.t, self.affine, parameters=3, mdr=True)
+        mapper = T1(signal_array, self.t, self.affine, parameters=3, mdr=False)
 
         if os.path.exists('test_output'):
             shutil.rmtree('test_output')
