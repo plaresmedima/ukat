@@ -474,6 +474,18 @@ class T1:
         fit_signal = fit_signal.reshape((*self.shape, self.n_ti))
         return fit_signal
 
+    def get_pixel_array(self):
+        """
+        Get the pixel array from the T1 class. This method should be used rather
+        than T1.pixel_array as it will return the data in the original scale.
+        
+        Returns
+        -------
+        pixel_array : np.ndarray
+            An array containing the pixel data in the original scale.
+        """
+        return self.pixel_array * self.scale
+
 
 def two_param_abs_eq(t, t1, m0):
     """
