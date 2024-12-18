@@ -234,8 +234,7 @@ class T1:
         self.mag_corr = mag_corr
         self.molli = molli
         if multithread == 'auto':
-            npixels = np.prod(pixel_array.shape[:-1])
-            if npixels > 20:
+            if self.n_vox > 20:
                 multithread = True
             else:
                 multithread = False
@@ -295,8 +294,9 @@ class T1:
                         'molli': False,
                         'multithread': self.multithread,
                     },
-                    # All default settings but kept here as a template for if we
-                    # decide to expose coreg options to ukat users in the future.
+                    # All default settings but kept here as a template for if
+                    # we decide to expose coreg options to ukat users in the
+                    # future.
                     fit_coreg={
                         'package': 'elastix',
                         'parallel': False,  # elastix is not parallelizable
@@ -304,12 +304,14 @@ class T1:
                 )
             else:
                 pixel_array = np.zeros(self.pixel_array.shape)
-                deform = np.zeros((*self.pixel_array.shape[:3], 2, self.pixel_array.shape[3]))
+                deform = np.zeros((*self.pixel_array.shape[:3], 2,
+                                   self.pixel_array.shape[3]))
                 for slice in range(self.shape[-1]):
                     print('-----------------')
                     print('Fitting slice ' + str(slice).zfill(3))
                     print('-----------------')
-                    inversion_list = np.array(self.inversion_list) + self.tss * slice
+                    inversion_list = (np.array(self.inversion_list)
+                                      + self.tss * slice)
                     (pixel_array[..., slice, :], deform[..., slice, :, :], _,
                      _) = mdreg.fit(
                         self.pixel_array[..., slice, :],
@@ -328,8 +330,9 @@ class T1:
                             'molli': False,
                             'multithread': self.multithread,
                         },
-                        # All default settings but kept here as a template for if we
-                        # decide to expose coreg options to ukat users in the future.
+                        # All default settings but kept here as a template for
+                        # if we decide to expose coreg options to ukat users
+                        # in the future.
                         fit_coreg={
                             'package': 'elastix',
                             'parallel': False,  # elastix is not parallelizable
@@ -518,8 +521,9 @@ class T1:
 
     def get_pixel_array(self):
         """
-        Get the pixel array from the T1 class. This method should be used rather
-        than T1.pixel_array as it will return the data in the original scale.
+        Get the pixel array from the T1 class. This method should be used
+        rather than T1.pixel_array as it will return the data in the
+        original scale.
         
         Returns
         -------

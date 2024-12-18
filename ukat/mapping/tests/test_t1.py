@@ -301,13 +301,19 @@ class TestT1:
                         mag_corr='yes please',
                         multithread=False)
 
-
     def test_molli_2p_warning(self):
         signal_array = np.tile(self.correct_signal_three_param, (10, 10, 3, 1))
         with pytest.warns(UserWarning):
             mapper = T1(pixel_array=signal_array,
                         inversion_list=self.t,
                         affine=self.affine, parameters=2, molli=True)
+
+    def test_tss_mdr_error(self):
+        signal_array = np.tile(self.correct_signal_three_param, (10, 10, 3, 1))
+        with pytest.raises(ValueError):
+            mapper = T1(pixel_array=signal_array,
+                        inversion_list=self.t,
+                        affine=self.affine, tss=10, mdr=True)
 
     def test_real_data(self):
         # Get test data
@@ -329,6 +335,10 @@ class TestT1:
         gold_standard_3p_single = [1347.824169, 657.254769, 0.0, 3948.24018]
         gold_standard_molli = [1554.586501,  606.863022, -170.611303,
                                6025.763663]
+        gold_standard_molli_mdr = [1528.876958,  659.720555, -209.721654,
+                                   5707.662715]
+        gold_standard_2p_mdr = [1038.024629,  427.33669 ,  223.047457,
+                                2600.325215]
 
         # Two parameter method
         mapper = T1(magnitude, ti, affine, parameters=2, tss=tss)
@@ -360,10 +370,26 @@ class TestT1:
                              t1_stats['min']['3D'], t1_stats['max']['3D']],
                             gold_standard_molli, rtol=1e-6, atol=5e-3)
 
+        # MDR TSS == 0
+        mapper = T1(image_molli[:, :, :2, :], ti_molli, affine_molli,
+                    parameters=3, molli=True, mdr=True)
+        t1_stats = arraystats.ArrayStats(mapper.t1_map).calculate()
+        npt.assert_allclose([t1_stats['mean']['3D'], t1_stats['std']['3D'],
+                             t1_stats['min']['3D'], t1_stats['max']['3D']],
+                            gold_standard_molli_mdr, rtol=1e-6, atol=5e-3)
+
+        # MDR TSS != 0
+        mapper = T1(magnitude[:, :, :2, :], ti, affine,
+                    parameters=2, tss=tss, mdr=True)
+        t1_stats = arraystats.ArrayStats(mapper.t1_map).calculate()
+        npt.assert_allclose([t1_stats['mean']['3D'], t1_stats['std']['3D'],
+                             t1_stats['min']['3D'], t1_stats['max']['3D']],
+                            gold_standard_2p_mdr, rtol=1e-6, atol=5e-3)
+
     def test_to_nifti(self):
         # Create a T1 map instance and test different export to NIFTI scenarios
         signal_array = np.tile(self.correct_signal_three_param, (10, 10, 3, 1))
-        mapper = T1(signal_array, self.t, self.affine, parameters=3, mdr=False)
+        mapper = T1(signal_array, self.t, self.affine, parameters=3)
 
         if os.path.exists('test_output'):
             shutil.rmtree('test_output')
@@ -373,7 +399,7 @@ class TestT1:
         mapper.to_nifti(output_directory='test_output',
                         base_file_name='t1test', maps='all')
         output_files = os.listdir('test_output')
-        assert len(output_files) == 10
+        assert len(output_files) == 9
         assert 't1test_eff_err.nii.gz' in output_files
         assert 't1test_eff_map.nii.gz' in output_files
         assert 't1test_m0_err.nii.gz' in output_files
@@ -383,7 +409,6 @@ class TestT1:
         assert 't1test_r2.nii.gz' in output_files
         assert 't1test_t1_err.nii.gz' in output_files
         assert 't1test_t1_map.nii.gz' in output_files
-        assert 't1test_deformation_field.nii.gz' in output_files
 
         for f in os.listdir('test_output'):
             os.remove(os.path.join('test_output', f))
