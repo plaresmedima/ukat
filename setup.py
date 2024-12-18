@@ -17,7 +17,7 @@ setup(
     url="https://github.com/UKRIN-MAPS/ukat",
     license="GPL-3.0",
 
-    python_requires='>=3.9, <=3.11',
+    python_requires='>=3.9, <3.12',
     packages=find_packages(),
     install_requires=requirements,
     include_package_data=True,
