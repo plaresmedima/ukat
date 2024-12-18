@@ -631,4 +631,8 @@ def magnitude_correct(pixel_array):
 # Private wrapper for use by mdreg
 def _t1_fit(pixel_array, inversion_list=None, affine=None, **kwargs):
     map = T1(pixel_array, inversion_list, affine, **kwargs)
-    return map.get_fit_signal(), None
+    if map.parameters == 2:
+        pars = np.stack((map.t1_map, map.m0_map), axis=-1)
+    else:
+        pars = np.stack((map.t1_map, map.m0_map, map.eff_map), axis=-1)
+    return map.get_fit_signal(), pars
