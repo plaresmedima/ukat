@@ -263,6 +263,12 @@ class T1:
                 'Temporal slice spacing can\'t be applied to the TI axis.'
             assert (tss_axis < self.dimensions), \
                 'tss_axis must be less than the number of spatial dimensions'
+            if (self.tss_axis != 2) & (self.mdr is True):
+                print(self.tss_axis)
+                raise ValueError('Temporal slice spacing only supported '
+                                 'along the z direction when using '
+                                 'model-driven registration.')
+
         if self.molli:
             if self.parameters == 2:
                 self.parameters = 3
@@ -270,29 +276,65 @@ class T1:
                               'using parameters=3.')
 
         if mdr:
-            pixel_array, deform, _, _ = mdreg.fit(
-                self.pixel_array,
-                force_2d=True,
-                fit_image={
-                    'func': _t1_fit,
-                    'inversion_list': self.inversion_list,
-                    'affine': self.affine,
-                    'tss': self.tss,
-                    'tss_axis': self.tss_axis,
-                    'mask': self.mask,
-                    'parameters': self.parameters,
-                    'mag_corr': self.mag_corr,
-                    # MOLLI-correction is not relevant for MDR
-                    'molli': False,
-                    'multithread': self.multithread,
-                },
-                # All default settings but kept here as a template for if we
-                # decide to expose coreg options to ukat users in the future.
-                fit_coreg={
-                    'package': 'elastix',
-                    'parallel': False,  # elastix is not parallelizable
-                }
-            )
+            if self.tss == 0:
+                print('Fitting with no TSS')
+                pixel_array, deform, _, _ = mdreg.fit(
+                    self.pixel_array,
+                    force_2d=True,
+                    verbose=1,
+                    fit_image={
+                        'func': _t1_fit,
+                        'inversion_list': self.inversion_list,
+                        'affine': self.affine,
+                        'tss': self.tss,
+                        'tss_axis': self.tss_axis,
+                        'mask': self.mask,
+                        'parameters': self.parameters,
+                        'mag_corr': self.mag_corr,
+                        # MOLLI-correction is not relevant for MDR
+                        'molli': False,
+                        'multithread': self.multithread,
+                    },
+                    # All default settings but kept here as a template for if we
+                    # decide to expose coreg options to ukat users in the future.
+                    fit_coreg={
+                        'package': 'elastix',
+                        'parallel': False,  # elastix is not parallelizable
+                    }
+                )
+            else:
+                pixel_array = np.zeros(self.pixel_array.shape)
+                deform = np.zeros((*self.pixel_array.shape[:3], 2, self.pixel_array.shape[3]))
+                for slice in range(self.shape[-1]):
+                    print('-----------------')
+                    print('Fitting slice ' + str(slice).zfill(3))
+                    print('-----------------')
+                    inversion_list = np.array(self.inversion_list) + self.tss * slice
+                    (pixel_array[..., slice, :], deform[..., slice, :, :], _,
+                     _) = mdreg.fit(
+                        self.pixel_array[..., slice, :],
+                        force_2d=True,
+                        verbose=1,
+                        fit_image={
+                            'func': _t1_fit,
+                            'inversion_list': inversion_list,
+                            'affine': self.affine,
+                            'tss': 0,
+                            'tss_axis': None,
+                            'mask': self.mask[..., slice],
+                            'parameters': self.parameters,
+                            'mag_corr': self.mag_corr,
+                            # MOLLI-correction is not relevant for MDR
+                            'molli': False,
+                            'multithread': self.multithread,
+                        },
+                        # All default settings but kept here as a template for if we
+                        # decide to expose coreg options to ukat users in the future.
+                        fit_coreg={
+                            'package': 'elastix',
+                            'parallel': False,  # elastix is not parallelizable
+                        }
+                    )
             # Changing the dimensions of the deformation field to a more
             # intuitive order.
             self.deformation_field = np.swapaxes(deform, -2, -1)
