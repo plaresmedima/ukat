@@ -372,7 +372,7 @@ class TestT1:
 
         # MDR TSS == 0
         mapper = T1(image_molli[:, :, :2, :], ti_molli, affine_molli,
-                    parameters=3, molli=True, mdr=True)
+                    parameters=3, molli=True, multithread=False, mdr=True)
         t1_stats = arraystats.ArrayStats(mapper.t1_map).calculate()
         npt.assert_allclose([t1_stats['mean']['3D'], t1_stats['std']['3D'],
                              t1_stats['min']['3D'], t1_stats['max']['3D']],
@@ -380,7 +380,7 @@ class TestT1:
 
         # MDR TSS != 0
         mapper = T1(magnitude[:, :, :2, :], ti, affine,
-                    parameters=2, tss=tss, mdr=True)
+                    parameters=2, tss=tss, multithread=False, mdr=True)
         t1_stats = arraystats.ArrayStats(mapper.t1_map).calculate()
         npt.assert_allclose([t1_stats['mean']['3D'], t1_stats['std']['3D'],
                              t1_stats['min']['3D'], t1_stats['max']['3D']],
