@@ -315,6 +315,14 @@ class TestT1:
                         inversion_list=self.t,
                         affine=self.affine, tss=10, tss_axis=1, mdr=True)
 
+    def test_mask_mdr_error(self):
+        signal_array = np.tile(self.correct_signal_three_param, (10, 10, 3, 1))
+        mask = np.ones(signal_array.shape[:-1])
+        with pytest.raises(ValueError):
+            mapper = T1(pixel_array=signal_array,
+                        inversion_list=self.t,
+                        affine=self.affine, mdr=True, mask=mask)
+
     def test_real_data(self):
         # Get test data
         magnitude, phase, affine, ti, tss = fetch.t1_philips(2)
@@ -374,6 +382,8 @@ class TestT1:
         mapper = T1(image_molli[:, :, :2, :], ti_molli, affine_molli,
                     parameters=3, molli=True, mdr=True)
         t1_stats = arraystats.ArrayStats(mapper.t1_map).calculate()
+        # Large tolerance as ITK performs differently on MacOS, Linux and
+        # Windows
         npt.assert_allclose([t1_stats['mean']['3D'], t1_stats['std']['3D'],
                              t1_stats['min']['3D'], t1_stats['max']['3D']],
                             gold_standard_molli_mdr, rtol=0.1, atol=50)
@@ -382,6 +392,8 @@ class TestT1:
         mapper = T1(magnitude[:, :, :2, :], ti, affine,
                     parameters=2, tss=tss, mdr=True)
         t1_stats = arraystats.ArrayStats(mapper.t1_map).calculate()
+        # Large tolerance as ITK performs differently on MacOS, Linux and
+        # Windows
         npt.assert_allclose([t1_stats['mean']['3D'], t1_stats['std']['3D'],
                              t1_stats['min']['3D'], t1_stats['max']['3D']],
                             gold_standard_2p_mdr, rtol=0.1, atol=50)

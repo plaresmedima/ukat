@@ -220,6 +220,9 @@ class T1:
         if mask is None:
             self.mask = np.ones(self.shape, dtype=bool)
         else:
+            if mdr is True:
+                raise ValueError('Masking is not supported when using '
+                                 'model-driven registration.')
             self.mask = mask.astype(bool)
         # Don't process any nan values
         self.mask[np.isnan(np.sum(pixel_array, axis=-1))] = False
